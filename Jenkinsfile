@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "custom-jenkins"
-        IMAGE_TAG  = "1.0"
-        CONTAINER_NAME = "custom-jenkins-container"
+        IMAGE_NAME = "naveengadde/jenkins-ci"
+        IMAGE_TAG  = "${BUILD_NUMBER}"
+        CONTAINER_NAME = "jenkins-ci-container"
     }
 
     stages {
@@ -17,26 +17,25 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG .'
+                bat 'docker build -t %IMAGE_NAME%:%IMAGE_TAG% .'
             }
         }
 
         stage('Stop & Remove Old Container') {
             steps {
-                sh 'docker rm -f $CONTAINER_NAME || true'
+                bat 'docker rm -f %CONTAINER_NAME% || exit 0'
             }
         }
 
         stage('Run New Container') {
             steps {
-                sh '''
-                docker run -d \
-                --name $CONTAINER_NAME \
-                -p 9090:8080 \
-                $IMAGE_NAME:$IMAGE_TAG
+                bat '''
+                docker run -d ^
+                --name %CONTAINER_NAME% ^
+                -p 9090:8080 ^
+                %IMAGE_NAME%:%IMAGE_TAG%
                 '''
             }
         }
-
     }
 }
