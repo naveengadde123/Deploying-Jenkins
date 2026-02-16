@@ -48,7 +48,7 @@ pipeline {
         stage('Deploy to EKS') {
             steps {
                 sh """
-                # Update image in k8s deployment.yaml dynamically
+                # Update image in K8s deployment.yaml dynamically
                 sed -i "s|image:.*|image: $ECR_REPO:$IMAGE_TAG|g" k8s/deployment.yaml
 
                 # Apply manifests (creates if not exists, updates if exists)
