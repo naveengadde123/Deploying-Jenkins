@@ -17,3 +17,9 @@ spec:
         image: 947754984655.dkr.ecr.ap-south-1.amazonaws.com/custom-jenkins:1.0
         ports:
         - containerPort: 8080
+        volumeMounts:
+        - name: jenkins-home
+          mountPath: /var/jenkins_home
+      volumes:
+      - name: jenkins-home
+        emptyDir: {}
