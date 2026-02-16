@@ -2,9 +2,10 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "custom-jenkins"
-        IMAGE_TAG  = "1.0"
-        CONTAINER_NAME = "custom-jenkins-container"
+        AWS_REGION = "ap-south-1"
+        ECR_REPO   = "947754984655.dkr.ecr.ap-south-1.amazonaws.com/custom-jenkins"
+        IMAGE_TAG  = "${BUILD_NUMBER}"
+        CLUSTER_NAME = "jenkins-cluster"
     }
 
     stages {
@@ -17,26 +18,45 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG .'
+                sh """
+                docker build -t $ECR_REPO:$IMAGE_TAG .
+                """
             }
         }
 
-        stage('Stop & Remove Old Container') {
+        stage('Login to ECR') {
             steps {
-                sh 'docker rm -f $CONTAINER_NAME || true'
+                sh """
+                aws ecr get-login-password --region $AWS_REGION | \
+                docker login --username AWS --password-stdin 947754984655.dkr.ecr.ap-south-1.amazonaws.com
+                """
             }
         }
 
-        stage('Run New Container') {
+        stage('Push Image to ECR') {
             steps {
-                sh '''
-                docker run -d \
-                --name $CONTAINER_NAME \
-                -p 9090:8080 \
-                $IMAGE_NAME:$IMAGE_TAG
-                '''
+                sh """
+                docker push $ECR_REPO:$IMAGE_TAG
+                """
             }
         }
 
+        stage('Update Kubeconfig') {
+            steps {
+                sh """
+                aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+                """
+            }
+        }
+
+        stage('Deploy to EKS') {
+            steps {
+                sh """
+                sed -i 's|:1.0|:$IMAGE_TAG|g' deployment.yaml
+                kubectl apply -f deployment.yaml
+                kubectl apply -f service.yaml
+                """
+            }
+        }
     }
 }
