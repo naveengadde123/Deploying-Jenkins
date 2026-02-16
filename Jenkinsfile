@@ -48,12 +48,12 @@ pipeline {
         stage('Deploy to EKS') {
             steps {
                 sh """
-                # Update image in deployment.yaml dynamically
-                sed -i "s|image:.*|image: $ECR_REPO:$IMAGE_TAG|g" deployment.yaml
+                # Update image in k8s deployment.yaml dynamically
+                sed -i "s|image:.*|image: $ECR_REPO:$IMAGE_TAG|g" k8s/deployment.yaml
 
                 # Apply manifests (creates if not exists, updates if exists)
-                kubectl apply -f deployment.yaml -n $K8S_NAMESPACE
-                kubectl apply -f service.yaml -n $K8S_NAMESPACE
+                kubectl apply -f k8s/deployment.yaml -n $K8S_NAMESPACE
+                kubectl apply -f k8s/service.yaml -n $K8S_NAMESPACE
 
                 # Wait for rollout to complete
                 kubectl rollout status deployment/jenkins -n $K8S_NAMESPACE
