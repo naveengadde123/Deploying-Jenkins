@@ -7,6 +7,7 @@ pipeline {
         ECR_REPO     = "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/custom-jenkins"
         IMAGE_TAG    = "${BUILD_NUMBER}"
         CLUSTER_NAME = "jenkins-cluster"
+        K8S_NAMESPACE = "default"
     }
 
     stages {
@@ -47,7 +48,15 @@ pipeline {
         stage('Deploy to EKS') {
             steps {
                 sh """
-                kubectl set image deployment/jenkins jenkins=$ECR_REPO:$IMAGE_TAG --record
+                # Update image in deployment.yaml dynamically
+                sed -i "s|image:.*|image: $ECR_REPO:$IMAGE_TAG|g" deployment.yaml
+
+                # Apply manifests (creates if not exists, updates if exists)
+                kubectl apply -f deployment.yaml -n $K8S_NAMESPACE
+                kubectl apply -f service.yaml -n $K8S_NAMESPACE
+
+                # Wait for rollout to complete
+                kubectl rollout status deployment/jenkins -n $K8S_NAMESPACE
                 """
             }
         }
